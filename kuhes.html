@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Basic HTML meta tags for proper rendering and responsiveness -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Company Growth Flow (Manual Link Delay)</title>
+
+  <!-- Load D3.js and D3 Sankey plugin -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+
+  <!-- Styling for layout, chart, and responsive behavior -->
+  <style>
+    body {
+      font-family: 'Georgia';
+      margin: 0;
+      overflow-x: hidden;
+      background: #f8f9fa;
+    }
+
+    #chart-container {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      position: relative;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #replay-btn {
+      /* Position and style of the replay button */
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 8px 14px;
+      font-size: 14px;
+      background-color: #00A34C;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+
+    #replay-btn:hover {
+      background-color: #00873c;
+    }
+
+    .node rect {
+      fill-opacity: 0.9;
+      transition: fill 0.3s, stroke 0.3s;
+    }
+
+    .link {
+      fill: none;
+      stroke-opacity: 0.4;
+    }
+
+    .node-labels-group {
+      pointer-events: none;
+    }
+
+    .node-label-box {
+      fill: white;
+      stroke: #ccc;
+      stroke-width: 1px;
+      rx: 4;
+      ry: 4;
+    }
+
+    .node-label {
+      font-size: 36px;
+      font-weight: bold;
+      fill: #333;
+      text-transform: capitalize;
+    }
+
+    #sankey {
+      overflow: visible;
+    }
+
+    /* Responsive adjustments for small screens */
+    @media (max-width: 768px) {
+      .node-label {
+        font-size: 10px;
+      }
+      #replay-btn {
+        top: 10px;
+        right: 10px;
+        padding: 10px 16px;
+        min-width: 80px;
+        font-size: 12px;
+      }
+      #chart-container {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Chart container with replay button and SVG for Sankey diagram -->
+  <div id="chart-container">
+    <button id="replay-btn" aria-label="Replay animation">Replay Flow</button>
+    <svg id="sankey"></svg>
+  </div>
+
+  <script>
+    // Loads and returns the data structure for the Sankey chart
+    async function loadData() {
+      return {
+        nodes: [
+          // Each node represents a department or team in the organization
+          { name: "SFFP", color: "#0d2136" },
+          { name: "ZNS", color: "#2A2E7C" },
+          { name: "SFC", color: "#2A2E7C" },
+          { name: "SF1", color: "#2A2E7C" },
+          { name: "ZAS", color: "#052F6B" },
+          { name: "PVS", color: "#052F6B" },
+          { name: "SMLENP", color: "#052F6B" },
+          { name: "SFVSNAICF", color: "#C98036" },
+          { name: "SMFC", color: "#C98036" },
+          { name: "ZBS", color: "#C98036" },
+          { name: "SLC", color: "#C98036" },
+          { name: "SF2", color: "#C98036" }
+        ],
+        links: [
+          // Each link shows the flow from one node to another
+          // 'delay' controls when the link will animate
+          { source: "SFFP", target: "ZNS", value: 1, color: "#CBCDED", delay: 400 },
+          { source: "ZNS", target: "SFC", value: 1, color: "#E6C5A4", delay: 400 },
+          { source: "SFC", target: "SF1", value: 0.5, color: "#CBCDED", delay: 1000 },
+          { source: "SFC", target: "ZAS", value: 0.5, color: "#CBCDED", delay: 400 },
+          { source: "ZAS", target: "PVS", value: 0.167, color: "#CFE2FD", delay: 2000 },
+          { source: "ZAS", target: "SMLENP", value: 0.167, color: "#CFE2FD", delay: 400 },
+          { source: "PVS", target: "SFVSNAICF", value: 0.167, color: "#CFE2FD", delay: 400 },
+          { source: "SMLENP", target: "SFVSNAICF", value: 0.167, color: "#E6C5A4", delay: 2000 },
+          { source: "ZAS", target: "SMFC", value: 0.167, color: "#E6C5A4", delay: 400 },
+          { source: "SMFC", target: "ZBS", value: 0.167, color: "#E6C5A4", delay: 400 },
+          { source: "SFFP", target: "ZBS", value: 0.167, color: "#E6C5A4", delay: 400 },
+          { source: "ZBS", target: "SLC", value: 0.334, color: "#E6C5A4", delay: 400 },
+          { source: "SLC", target: "SF2", value: 0.334, color: "#E6C5A4", delay: 400 }
+        ]
+      };
+    }
+
+    // Initializes the SVG and returns basic dimensions
+    function initChart() {
+      const container = document.getElementById('chart-container');
+      const width = container.clientWidth;
+      const height = Math.min(window.innerHeight * 0.8, 800);
+      const padding = 100;
+
+      const svg = d3.select('#sankey')
+        .attr('width', width)
+        .attr('height', height)
+        .attr('viewBox', [-padding, 0, width + padding * 2, height])
+        .attr('preserveAspectRatio', 'xMidYMid meet')
+        .style('width', '100%')
+        .style('height', 'auto');
+
+      return { svg, width, height, padding };
+    }
+
+    // Renders the Sankey diagram with animation and delayed transitions
+    async function renderSankey() {
+      const { svg, width, height, padding } = initChart();
+      const data = await loadData();
+
+      // Clone nodes and links so original data is untouched
+      const sankeyNodes = data.nodes.map(d => ({ ...d }));
+      const sankeyLinks = data.links.map(d => ({
+        source: sankeyNodes.find(n => n.name === d.source),
+        target: sankeyNodes.find(n => n.name === d.target),
+        value: d.value,
+        color: d.color,
+        delay: d.delay || 0
+      }));
+
+      // Configure the Sankey layout
+      const sankey = d3.sankey()
+        .nodeWidth(25)
+        .nodePadding(width < 600 ? 20 : 40)
+        .extent([[20 + padding, 20], [width - 20 + padding, height - 20]]);
+
+      // Compute node and link layout
+      const { nodes, links } = sankey({ nodes: sankeyNodes, links: sankeyLinks });
+
+      // Optional: move specific node ("ZBS") lower to reduce clutter
+      nodes.forEach(node => {
+        if (node.name === "ZBS") {
+          const height = node.y1 - node.y0;
+          const offset = 100;
+          node.y0 += offset;
+          node.y1 = node.y0 + height;
+        }
+      });
+
+      // Clear previous SVG elements before redrawing
+      svg.selectAll("*").remove();
+
+      // Identify the starting nodes (those without incoming links)
+      const allLinkTargets = new Set(links.map(l => l.target.name));
+      const allLinkSources = new Set(links.map(l => l.source.name));
+      const initialNodeNames = [...allLinkSources].filter(n => !allLinkTargets.has(n));
+
+      // Draw nodes with initial opacity 0 (will fade in)
+      const nodeGroup = svg.append("g")
+        .attr("class", "nodes")
+        .selectAll("g")
+        .data(nodes)
+        .join("g")
+        .style("opacity", d => initialNodeNames.includes(d.name) ? 1 : 0);
+
+      // Draw the rectangles for nodes
+      nodeGroup.append("rect")
+        .attr("x", d => d.x0)
+        .attr("y", d => d.y0)
+        .attr("height", d => d.y1 - d.y0)
+        .attr("width", d => d.x1 - d.x0)
+        .attr("fill", d => d.color || "#ccc");
+
+      const linkGroup = svg.append("g").attr("class", "links");
+
+      // Animate each link with a delay, and fade in the target node when complete
+      for (let i = 0; i < links.length; i++) {
+        const d = links[i];
+        const path = d3.sankeyLinkHorizontal()(d);
+
+        const link = linkGroup.append("path")
+          .attr("d", path)
+          .attr("fill", "none")
+          .attr("stroke", d.color || "#999")
+          .attr("stroke-width", Math.max(1, d.width))
+          .attr("stroke-dasharray", function () {
+            const length = this.getTotalLength();
+            return `${length} ${length}`;
+          })
+          .attr("stroke-dashoffset", function () {
+            return this.getTotalLength();
+          })
+          .style("opacity", 0.8);
+
+        // Animate each link with a manual delay
+        await new Promise(resolve => {
+          setTimeout(() => {
+            link.transition()
+              .duration(1000)
+              .attr("stroke-dashoffset", 0)
+              .on("end", () => {
+                // Fade in the target node when link finishes
+                svg.selectAll(".nodes g")
+                  .filter(n => n.name === d.target.name)
+                  .transition()
+                  .duration(400)
+                  .style("opacity", 1);
+                resolve();
+              });
+          }, d.delay);
+        });
+      }
+    }
+
+    // On page load, initialize and render chart
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        if (!window.d3 || !d3.sankey) throw new Error('D3 or Sankey not loaded!');
+        await renderSankey();
+      } catch (error) {
+        // Display error message in case of failure
+        console.error('Failed to render Sankey:', error);
+        document.getElementById('chart-container').innerHTML = `
+          <div style="color: red; padding: 20px; text-align: center;">
+            <h3 style="margin-bottom: 10px;">⚠️ Chart Loading Failed</h3>
+            <p style="margin-bottom: 15px;">${error.message}</p>
+            <button onclick="window.location.reload()" 
+                    style="padding: 8px 16px; background: #00A34C; color: white; border: none; border-radius: 4px;">
+              Try Again
+            </button>
+          </div>
+        `;
+      }
+    });
+
+    // Rerender chart on window resize or orientation change
+    window.addEventListener('resize', () => {
+      renderSankey();
+    });
+
+    window.addEventListener('orientationchange', () => {
+      setTimeout(renderSankey, 300);
+    });
+
+    // Replay animation when button is clicked
+    document.getElementById('replay-btn').addEventListener('click', () => {
+      renderSankey();
+    });
+  </script>
+</body>
+</html>
