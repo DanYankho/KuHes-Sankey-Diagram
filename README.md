@@ -1,4 +1,4 @@
-📊 Company Learning Department – Growth & Structure Flow (Animated Sankey Diagram)
+#📊 Company Learning Department – Growth & Structure Flow (Animated Sankey Diagram)
 
 This project is an interactive and animated Sankey diagram built using D3.js v7 and the D3 Sankey plugin. It visually represents the organizational structure and historical growth flow of a company's Learning Department or related divisions, with a special focus on how teams and sub-units evolved or branched from one another over time.
 
